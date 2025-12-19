@@ -638,7 +638,7 @@ function AddView({
                   </>
                 ) : (
                   <>
-                    Analyze with Gemini
+                    Analyze with Gemini 3.0 Flash
                     <span className="ml-1 text-[#00F0B5]">✨</span>
                   </>
                 )}
