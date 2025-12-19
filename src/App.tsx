@@ -178,7 +178,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 font-sans relative selection:bg-[#00F0B5] selection:text-slate-900">
+    <div className="min-h-screen bg-slate-950 text-slate-50 font-sans relative selection:bg-white selection:text-black">
       {/* Header */}
       <header className="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -188,7 +188,7 @@ function App() {
               <img
                 src="https://cdn.brandfetch.io/waymo.com/w/400/h/120?c=1bxid64Mup7aczewSAYMX&t=dark"
                 alt="Waymo"
-                className="h-14 w-auto object-contain brightness-0 invert"
+                className="h-14 w-auto object-contain"
               />
               <span className="text-lg font-medium text-slate-500 border-l-2 border-slate-800 pl-4 pt-0.5 tracking-tight">
                 Always On Intelligence
@@ -200,7 +200,7 @@ function App() {
               <button
                 onClick={() => setActiveTab('dashboard')}
                 className={`px-6 py-2 rounded-full text-sm font-bold transition-all duration-300 ${activeTab === 'dashboard'
-                  ? 'bg-[#0056D2] text-white shadow-md shadow-blue-900/20'
+                  ? 'bg-white text-black shadow-md shadow-slate-900/20'
                   : 'text-slate-400 hover:text-slate-200'
                   }`}
               >
@@ -209,7 +209,7 @@ function App() {
               <button
                 onClick={() => setActiveTab('add')}
                 className={`px-6 py-2 rounded-full text-sm font-bold transition-all duration-300 ${activeTab === 'add'
-                  ? 'bg-[#0056D2] text-white shadow-md shadow-blue-900/20'
+                  ? 'bg-white text-black shadow-md shadow-slate-900/20'
                   : 'text-slate-400 hover:text-slate-200'
                   }`}
               >
@@ -219,7 +219,7 @@ function App() {
             <div className="h-6 w-px bg-slate-800"></div>
             <button
               onClick={() => setShowSettings(true)}
-              className="p-2.5 text-slate-400 hover:text-[#0056D2] hover:bg-slate-800 rounded-full transition-all duration-300"
+              className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all duration-300"
               title="Settings"
             >
               <Settings size={20} />
@@ -298,7 +298,7 @@ function App() {
                     <input
                       type="url"
                       placeholder="https://docs.google.com/spreadsheets/d/..."
-                      className="w-full px-3 py-2 border border-slate-700 bg-slate-800 text-slate-50 rounded-lg focus:ring-2 focus:ring-indigo-900/50 focus:border-indigo-500 outline-none placeholder:text-slate-600"
+                      className="w-full px-3 py-2 border border-slate-700 bg-slate-800 text-slate-50 rounded-lg focus:ring-2 focus:ring-slate-700 focus:border-white outline-none placeholder:text-slate-600"
                       value={sheetUrl}
                       onChange={(e) => setSheetUrl(e.target.value)}
                     />
@@ -312,7 +312,7 @@ function App() {
                       Required for "Send to Sheet" button.
                       <button
                         onClick={() => setShowGuide(!showGuide)}
-                        className="ml-1 text-indigo-400 hover:underline font-medium"
+                        className="ml-1 text-white hover:underline font-medium"
                       >
                         {showGuide ? "Hide Setup Guide" : "How do I get this?"}
                       </button>
@@ -320,7 +320,7 @@ function App() {
                     <input
                       type="url"
                       placeholder="https://script.google.com/macros/s/..."
-                      className="w-full px-3 py-2 border border-slate-700 bg-slate-800 text-slate-50 rounded-lg focus:ring-2 focus:ring-indigo-900/50 focus:border-indigo-500 outline-none placeholder:text-slate-600"
+                      className="w-full px-3 py-2 border border-slate-700 bg-slate-800 text-slate-50 rounded-lg focus:ring-2 focus:ring-slate-700 focus:border-white outline-none placeholder:text-slate-600"
                       value={webhookUrl}
                       onChange={(e) => setWebhookUrl(e.target.value)}
                     />
@@ -377,7 +377,7 @@ function App() {
               <div className="p-4 bg-slate-800/50 flex justify-end">
                 <button
                   onClick={() => saveSettings(sheetUrl, webhookUrl)}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium text-sm hover:bg-indigo-700"
+                  className="px-4 py-2 bg-white text-black rounded-lg font-medium text-sm hover:bg-slate-200"
                 >
                   Save Settings
                 </button>
@@ -421,7 +421,7 @@ function DashboardView({
               href={sheetUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors font-medium text-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-slate-300 border border-slate-700 rounded-lg hover:bg-slate-700 hover:text-white transition-colors font-medium text-sm"
             >
               <ExternalLink size={16} />
               Open Sheet
@@ -437,7 +437,7 @@ function DashboardView({
               navigator.clipboard.writeText(tsv);
               alert('Copied to clipboard!');
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors font-medium text-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors font-medium text-sm"
           >
             <Copy size={16} />
             Copy All
@@ -460,7 +460,7 @@ function DashboardView({
           {insights.map((insight) => (
             <div key={insight.id} className="bg-slate-900 rounded-[2rem] border border-slate-800 p-8 shadow-sm hover:shadow-xl transition-all duration-300 group relative overflow-hidden">
               {/* Decorative accent */}
-              <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#00F0B5] via-[#0056D2] to-[#00F0B5]"></div>
+              <div className="absolute top-0 left-0 w-full h-1.5 bg-slate-800"></div>
 
               <div className="flex items-start justify-between mb-8">
                 <div className="flex items-center gap-5">
@@ -492,7 +492,7 @@ function DashboardView({
                   <button
                     onClick={() => onSend(insight)}
                     disabled={isSending === insight.id}
-                    className="flex items-center gap-2 px-5 py-2 bg-[#0056D2] text-white hover:bg-[#0042A1] rounded-full text-sm font-bold transition-colors shadow-md shadow-blue-100"
+                    className="flex items-center gap-2 px-5 py-2 bg-white text-black hover:bg-slate-200 rounded-full text-sm font-bold transition-colors shadow-md shadow-slate-900/20"
                   >
                     {isSending === insight.id ? <Loader2 size={16} className="animate-spin" /> : <ExternalLink size={16} />}
                     Send to Sheet
@@ -502,7 +502,7 @@ function DashboardView({
                       href={insight.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-2.5 text-slate-400 hover:text-[#0056D2] hover:bg-blue-50 rounded-full transition-colors"
+                      className="p-2.5 text-slate-500 hover:text-white hover:bg-slate-800 rounded-full transition-colors"
                       title="Open Source URL"
                     >
                       <LinkIcon size={20} />
@@ -527,22 +527,22 @@ function DashboardView({
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6">
-                  <div className="bg-[#F0FDFA] p-6 rounded-[2rem] border border-[#CCFBF1]">
-                    <h4 className="text-xs font-bold text-[#0F766E] uppercase tracking-widest mb-3 flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#00F0B5]"></span>
+                  <div className="bg-slate-900 p-6 rounded-[2rem] border border-slate-800">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-slate-600"></span>
                       Why it Matters
                     </h4>
-                    <div className="text-slate-800 text-sm leading-relaxed whitespace-pre-line font-medium">
+                    <div className="text-slate-300 text-sm leading-relaxed whitespace-pre-line font-medium">
                       {insight.impact}
                     </div>
                   </div>
 
-                  <div className="bg-[#EFF6FF] p-6 rounded-[2rem] border border-[#DBEAFE]">
-                    <h4 className="text-xs font-bold text-[#1D4ED8] uppercase tracking-widest mb-3 flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#0056D2]"></span>
+                  <div className="bg-slate-900 p-6 rounded-[2rem] border border-slate-800">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-slate-600"></span>
                       Recommended Action
                     </h4>
-                    <div className="text-slate-800 text-sm leading-relaxed whitespace-pre-line font-medium">
+                    <div className="text-slate-300 text-sm leading-relaxed whitespace-pre-line font-medium">
                       {insight.action}
                     </div>
                   </div>
@@ -583,8 +583,8 @@ function AddView({
             <button
               onClick={() => setInputMode('url')}
               className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold transition-all duration-300 ${inputMode === 'url'
-                ? 'bg-[#0056D2] text-white shadow-lg shadow-blue-900/20'
-                : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-slate-200'
+                ? 'bg-white text-black shadow-lg shadow-slate-900/20'
+                : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white'
                 }`}
             >
               <LinkIcon size={18} />
@@ -593,8 +593,8 @@ function AddView({
             <button
               onClick={() => setInputMode('text')}
               className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold transition-all duration-300 ${inputMode === 'text'
-                ? 'bg-[#0056D2] text-white shadow-lg shadow-blue-900/20'
-                : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-slate-200'
+                ? 'bg-white text-black shadow-lg shadow-slate-900/20'
+                : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white'
                 }`}
             >
               <FileText size={18} />
@@ -607,7 +607,7 @@ function AddView({
               <input
                 type="url"
                 placeholder="https://techcrunch.com/..."
-                className="w-full px-6 py-4 rounded-2xl border border-slate-700 bg-slate-800 text-slate-50 focus:border-[#0056D2] focus:ring-4 focus:ring-blue-900/20 outline-none transition-all text-lg placeholder:text-slate-500"
+                className="w-full px-6 py-4 rounded-2xl border border-slate-700 bg-slate-800 text-slate-50 focus:border-white focus:ring-4 focus:ring-slate-700 outline-none transition-all text-lg placeholder:text-slate-500"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
@@ -615,7 +615,7 @@ function AddView({
             ) : (
               <textarea
                 placeholder="Paste the article content here..."
-                className="w-full px-6 py-4 rounded-2xl border border-slate-700 bg-slate-800 text-slate-50 focus:border-[#0056D2] focus:ring-4 focus:ring-blue-900/20 outline-none transition-all h-48 resize-none text-lg placeholder:text-slate-500"
+                className="w-full px-6 py-4 rounded-2xl border border-slate-700 bg-slate-800 text-slate-50 focus:border-white focus:ring-4 focus:ring-slate-700 outline-none transition-all h-48 resize-none text-lg placeholder:text-slate-500"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
               />
@@ -625,7 +625,7 @@ function AddView({
               <button
                 onClick={handleAnalyze}
                 disabled={isAnalyzing || !inputValue.trim()}
-                className="flex items-center gap-2 px-8 py-3 bg-[#0056D2] hover:bg-[#0042A1] disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-full font-bold transition-all shadow-lg shadow-blue-900/20 hover:shadow-xl disabled:shadow-none text-base"
+                className="flex items-center gap-2 px-8 py-3 bg-white hover:bg-slate-200 disabled:bg-slate-700 disabled:text-slate-500 text-black rounded-full font-bold transition-all shadow-lg shadow-slate-900/20 hover:shadow-xl disabled:shadow-none text-base"
               >
                 {isAnalyzing ? (
                   <>
@@ -635,7 +635,7 @@ function AddView({
                 ) : (
                   <>
                     Analyze with Gemini 3.0 Flash
-                    <span className="ml-1 text-[#00F0B5]">✨</span>
+                    <span className="ml-1 text-slate-400">✨</span>
                   </>
                 )}
               </button>
@@ -653,7 +653,7 @@ function AddView({
           <div className="p-8 bg-slate-900 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-xl font-bold text-slate-50 flex items-center gap-3">
-                <div className="w-1.5 h-8 bg-[#00F0B5] rounded-full"></div>
+                <div className="w-1.5 h-8 bg-slate-500 rounded-full"></div>
                 Analysis Result
               </h3>
             </div>
@@ -665,7 +665,7 @@ function AddView({
                   type="text"
                   value={analysisResult.company}
                   onChange={(e) => setAnalysisResult({ ...analysisResult, company: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-700 bg-slate-800 focus:border-[#0056D2] outline-none text-slate-50 font-bold text-lg"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-700 bg-slate-800 focus:border-white outline-none text-slate-50 font-bold text-lg"
                 />
               </div>
 
@@ -674,26 +674,26 @@ function AddView({
                 <textarea
                   value={analysisResult.summary}
                   onChange={(e) => setAnalysisResult({ ...analysisResult, summary: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-700 bg-slate-800 focus:border-[#0056D2] outline-none text-slate-300 h-32 resize-none text-base leading-relaxed"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-700 bg-slate-800 focus:border-white outline-none text-slate-300 h-32 resize-none text-base leading-relaxed"
                 />
               </div>
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-bold text-teal-400 uppercase tracking-widest mb-2">Why It Matters</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Why It Matters</label>
                   <textarea
                     value={analysisResult.impact}
                     onChange={(e) => setAnalysisResult({ ...analysisResult, impact: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-teal-900/50 bg-teal-950/30 focus:border-[#00F0B5] outline-none text-slate-300 h-40 resize-none leading-relaxed"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-800 bg-slate-900 focus:border-white outline-none text-slate-300 h-40 resize-none leading-relaxed"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-blue-400 uppercase tracking-widest mb-2">Recommended Action</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Recommended Action</label>
                   <textarea
                     value={analysisResult.action}
                     onChange={(e) => setAnalysisResult({ ...analysisResult, action: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-blue-900/50 bg-blue-950/30 focus:border-[#0056D2] outline-none text-slate-300 h-40 resize-none leading-relaxed"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-800 bg-slate-900 focus:border-white outline-none text-slate-300 h-40 resize-none leading-relaxed"
                   />
                 </div>
               </div>
@@ -708,7 +708,7 @@ function AddView({
               </button>
               <button
                 onClick={handleSave}
-                className="flex items-center gap-2 px-8 py-3 bg-[#0056D2] hover:bg-[#0042A1] text-white rounded-full font-bold transition-all shadow-lg shadow-blue-900/20 hover:shadow-xl"
+                className="flex items-center gap-2 px-8 py-3 bg-white hover:bg-slate-200 text-black rounded-full font-bold transition-all shadow-lg shadow-slate-900/20 hover:shadow-xl"
               >
                 <Save size={20} />
                 Save to Dashboard
