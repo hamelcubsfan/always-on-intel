@@ -5,7 +5,7 @@ export const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 export const analyzeContent = async (text: string) => {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: `
         You are an elite Technical Sourcer and Headhunter for Waymo (Autonomous Driving). 
         Your job is to read the news and immediately identify **who to hire** and **how to get them**.
