@@ -54,15 +54,15 @@ export const analyzeContent = async (text: string) => {
         }
       }
     });
-    
+
     const rawText = response.text || "{}";
-    
+
     // Clean up potential markdown code blocks if the model ignores responseMimeType (rare but possible)
     const jsonString = rawText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
 
     try {
       const parsed = JSON.parse(jsonString);
-      
+
       // Helper to clean leading dashes/bullets
       const cleanText = (str: string) => str ? str.replace(/^[\s\-\•]+/, '').trim() : '';
 
