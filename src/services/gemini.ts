@@ -4,9 +4,10 @@ export const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export const analyzeContent = async (text: string) => {
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `
+    const makeRequest = async () => {
+      return ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `
         You are an elite Technical Sourcer and Headhunter for Waymo (Autonomous Driving). 
         Your job is to read the news and immediately identify **who to hire** and **how to get them**.
 
@@ -41,30 +42,41 @@ export const analyzeContent = async (text: string) => {
         Text to analyze:
         ${text.slice(0, 15000)}
       `,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "OBJECT",
-          properties: {
-            company: { type: "STRING" },
-            summary: { type: "STRING" },
-            impact: { type: "STRING" },
-            action: { type: "STRING" }
+        config: {
+          temperature: 0.2,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            additionalProperties: false,
+            required: ["company", "summary", "impact", "action"],
+            properties: {
+              company: { type: "STRING" },
+              summary: { type: "STRING" },
+              impact: { type: "STRING" },
+              action: { type: "STRING" }
+            }
           }
         }
-      }
-    });
+      });
+    };
 
-    const rawText = response.text || "{}";
+    const getText = (response: any): string => {
+      // SDK sometimes exposes `.text` as a function, sometimes as a string
+      if (typeof response?.text === "function") return response.text();
+      if (typeof response?.text === "string") return response.text;
+      return "{}";
+    };
 
-    // Clean up potential markdown code blocks if the model ignores responseMimeType (rare but possible)
-    const jsonString = rawText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    const cleanText = (str: string) =>
+      str ? str.replace(/^[\s\-\•]+/, "").trim() : "";
 
-    try {
+    const parseResponse = (rawText: string) => {
+      const jsonString = rawText
+        .replace(/^```json\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
+
       const parsed = JSON.parse(jsonString);
-
-      // Helper to clean leading dashes/bullets
-      const cleanText = (str: string) => str ? str.replace(/^[\s\-\•]+/, '').trim() : '';
 
       return {
         company: cleanText(parsed.company),
@@ -72,17 +84,22 @@ export const analyzeContent = async (text: string) => {
         impact: cleanText(parsed.impact),
         action: cleanText(parsed.action)
       };
-    } catch (parseError) {
-      console.error("JSON Parse Error:", parseError);
-      console.log("Raw Response:", rawText);
-      return {
-        company: "Unknown",
-        summary: "Failed to parse analysis result.",
-        impact: "N/A",
-        action: "N/A"
-      };
+    };
+
+    // Attempt #1
+    const response1 = await makeRequest();
+    const rawText1 = getText(response1);
+
+    let result = parseResponse(rawText1);
+
+    // If any field is missing/empty, retry once (helps with intermittent partial outputs)
+    if (!result.company || !result.summary || !result.impact || !result.action) {
+      const response2 = await makeRequest();
+      const rawText2 = getText(response2);
+      result = parseResponse(rawText2);
     }
 
+    return result;
   } catch (error) {
     console.error("Gemini Analysis Error:", error);
     throw new Error("Failed to analyze content with Gemini.");
