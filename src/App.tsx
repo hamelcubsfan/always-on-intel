@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
-  Plus,
   Trash2,
   ExternalLink,
   Loader2,
   Save,
   FileText,
   Link as LinkIcon,
-  Search,
   Copy,
-  Check,
   Settings,
   X
 } from 'lucide-react';
@@ -25,13 +22,15 @@ function App() {
   const [webhookUrl, setWebhookUrl] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
-  const [isSending, setIsSending] = useState<number | null>(null); // ID of insight being sent
+  const [isSending, setIsSending] = useState<number | null>(null);
 
   // Add Form State
   const [inputMode, setInputMode] = useState<'url' | 'text'>('url');
   const [inputValue, setInputValue] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<Insight | null>(null);
+
+  // Global UI error (covers dashboard fetch failures too)
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -62,16 +61,11 @@ function App() {
     }
 
     setIsSending(insight.id || 999);
-
-    // Set payload and submit form
-    // We use a timeout to ensure state updates before submission
     setPayload(JSON.stringify(insight));
 
     setTimeout(() => {
       if (formRef.current) {
         formRef.current.submit();
-        // Since we can't detect success from an iframe submission easily, 
-        // we just assume success after a short delay and notify the user.
         setTimeout(() => {
           setIsSending(null);
           alert('Sent to Google Sheet!');
@@ -82,11 +76,39 @@ function App() {
 
   const fetchInsights = async () => {
     try {
+      setError(null);
+
       const res = await fetch('/api/insights');
-      const data = await res.json();
+      let data: any = null;
+
+      // Try to parse JSON either way, but handle non-2xx correctly
+      try {
+        data = await res.json();
+      } catch {
+        // non-JSON response body
+      }
+
+      if (!res.ok) {
+        const msg =
+          (data && typeof data === 'object' && data.error) ?
+            String(data.error) :
+            `Failed to load insights (HTTP ${res.status})`;
+        setInsights([]);
+        setError(msg);
+        return;
+      }
+
+      if (!Array.isArray(data)) {
+        setInsights([]);
+        setError('Insights API returned unexpected data. Check /api/insights.');
+        return;
+      }
+
       setInsights(data);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to fetch insights", e);
+      setInsights([]);
+      setError(e?.message || 'Failed to load insights.');
     }
   };
 
@@ -134,9 +156,12 @@ function App() {
         impact: result.impact,
         action: result.action,
         url: sourceUrl,
-        date: new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles', dateStyle: 'short', timeStyle: 'short' })
+        date: new Date().toLocaleString('en-US', {
+          timeZone: 'America/Los_Angeles',
+          dateStyle: 'short',
+          timeStyle: 'short'
+        })
       });
-
 
     } catch (err: any) {
       setError(err.message || "An error occurred during analysis");
@@ -149,32 +174,53 @@ function App() {
     if (!analysisResult) return;
 
     try {
-      await fetch('/api/insights', {
+      setError(null);
+      const res = await fetch('/api/insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(analysisResult)
       });
 
+      if (!res.ok) {
+        let data: any = null;
+        try { data = await res.json(); } catch {}
+        const msg =
+          (data && typeof data === 'object' && data.error) ?
+            String(data.error) :
+            `Failed to save insight (HTTP ${res.status})`;
+        setError(msg);
+        return;
+      }
+
       await fetchInsights();
       setActiveTab('dashboard');
       setAnalysisResult(null);
       setInputValue('');
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to save", e);
+      setError(e?.message || 'Failed to save.');
     }
   };
 
   const handleDelete = async (id: number) => {
     try {
-      await fetch(`/api/insights/${id}`, { method: 'DELETE' });
+      setError(null);
+      const res = await fetch(`/api/insights/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        let data: any = null;
+        try { data = await res.json(); } catch {}
+        const msg =
+          (data && typeof data === 'object' && data.error) ?
+            String(data.error) :
+            `Failed to delete insight (HTTP ${res.status})`;
+        setError(msg);
+        return;
+      }
       fetchInsights();
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to delete", e);
+      setError(e?.message || 'Failed to delete.');
     }
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
   };
 
   return (
@@ -183,7 +229,6 @@ function App() {
       <header className="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {/* Official Waymo Logo */}
             <div className="flex items-center gap-4 select-none">
               <img
                 src="https://cdn.brandfetch.io/waymo.com/w/400/h/120?c=1bxid64Mup7aczewSAYMX&t=dark"
@@ -229,6 +274,21 @@ function App() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-10">
+        {error && (
+          <div className="mb-6 p-4 bg-red-900/20 text-red-400 text-sm rounded-2xl border border-red-900/50 flex items-center justify-between gap-3">
+            <div>
+              <span className="font-bold bg-red-900/50 px-2 py-0.5 rounded text-red-300 mr-2">Error</span>
+              {error}
+            </div>
+            <button
+              onClick={() => fetchInsights()}
+              className="px-3 py-1.5 bg-white text-black rounded-lg font-medium text-sm hover:bg-slate-200"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           {activeTab === 'dashboard' ? (
             <DashboardView
@@ -341,10 +401,10 @@ function App() {
                       </ol>
                       <div className="relative">
                         <pre className="bg-slate-800 text-slate-200 p-3 rounded-md overflow-x-auto text-xs font-mono">
-                          {`function doPost(e) {
+{`function doPost(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var data;
-  
+
   // Handle both JSON fetch and Form submission
   try {
     data = JSON.parse(e.postData.contents);
@@ -358,17 +418,10 @@ function App() {
     // Order: Date, Company, Summary, Impact, Action, URL
     sheet.appendRow([data.date, data.company, data.summary, data.impact, data.action, data.url]);
   }
-  
+
   return ContentService.createTextOutput("Success");
 }`}
                         </pre>
-                        <button
-                          onClick={() => navigator.clipboard.writeText(`function doPost(e) {\n  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();\n  var data;\n  try {\n    data = JSON.parse(e.postData.contents);\n  } catch(err) {\n    if (e.parameter && e.parameter.payload) {\n      data = JSON.parse(e.parameter.payload);\n    }\n  }\n\n  if (data) {\n    sheet.appendRow([data.date, data.company, data.summary, data.impact, data.action, data.url]);\n  }\n  return ContentService.createTextOutput("Success");\n}`)}
-                          className="absolute top-2 right-2 p-1 bg-white/10 hover:bg-white/20 rounded text-white"
-                          title="Copy Code"
-                        >
-                          <Copy size={14} />
-                        </button>
                       </div>
                     </div>
                   )}
@@ -459,12 +512,10 @@ function DashboardView({
         <div className="grid gap-4">
           {insights.map((insight) => (
             <div key={insight.id} className="bg-slate-900 rounded-[2rem] border border-slate-800 p-8 shadow-sm hover:shadow-xl transition-all duration-300 group relative overflow-hidden">
-              {/* Decorative accent */}
               <div className="absolute top-0 left-0 w-full h-1.5 bg-slate-800"></div>
 
               <div className="flex items-start justify-between mb-8">
                 <div className="flex items-center gap-5">
-                  {/* Company Logo & Name */}
                   <div className="w-14 h-14 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden shrink-0 shadow-sm p-2">
                     <img
                       src={`https://cdn.brandfetch.io/${insight.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com/w/100/h/100?c=1bxid64Mup7aczewSAYMX`}
