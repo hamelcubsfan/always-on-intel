@@ -2,14 +2,14 @@ import express from "express";
 import { createClient } from "@supabase/supabase-js";
 import * as cheerio from "cheerio";
 
-// Initialize Supabase
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
+// Read and sanitize env vars
+const supabaseUrl = (process.env.SUPABASE_URL || '').trim();
+const supabaseAnonKey = (process.env.SUPABASE_ANON_KEY || '').trim();
 
 const app = express();
 app.use(express.json());
 
-function assertSupabaseConfigured(res: any) {
+function validateSupabaseEnv(res?: any) {
   const missing: string[] = [];
   if (!supabaseUrl) missing.push('SUPABASE_URL');
   if (!supabaseAnonKey) missing.push('SUPABASE_ANON_KEY');
@@ -17,17 +17,34 @@ function assertSupabaseConfigured(res: any) {
   if (missing.length > 0) {
     const msg = `Supabase is not configured. Missing env var(s): ${missing.join(', ')}`;
     console.error(msg);
-    res.status(500).json({ error: msg });
-    return false;
+    if (res) res.status(500).json({ error: msg });
+    return { ok: false, msg };
   }
-  return true;
+
+  // Validate URL format
+  let hostname = '';
+  try {
+    hostname = new URL(supabaseUrl).hostname;
+  } catch {
+    const msg = `SUPABASE_URL is not a valid URL: "${supabaseUrl}"`;
+    console.error(msg);
+    if (res) res.status(500).json({ error: msg });
+    return { ok: false, msg };
+  }
+
+  return { ok: true, hostname };
 }
 
-const supabase = (supabaseUrl && supabaseAnonKey)
+const envCheck = validateSupabaseEnv();
+if (envCheck.ok) {
+  console.log(`Supabase configured: ${envCheck.hostname}`);
+}
+
+const supabase = (envCheck.ok)
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
-// 1. Scrape URL (Fetch + Cheerio only)
+// 1. Scrape URL
 app.post("/api/scrape", async (req, res) => {
   const { url: originalUrl } = req.body;
   if (!originalUrl) return res.status(400).json({ error: "URL is required" });
@@ -58,7 +75,6 @@ app.post("/api/scrape", async (req, res) => {
     }
 
     res.json({ content, method: "Fetch (Serverless)" });
-
   } catch (fetchError: any) {
     console.error("Scrape failed:", fetchError);
     return res.status(500).json({
@@ -67,9 +83,10 @@ app.post("/api/scrape", async (req, res) => {
   }
 });
 
-// 2. Get Insights (Supabase)
+// 2. Get Insights
 app.get("/api/insights", async (req, res) => {
-  if (!assertSupabaseConfigured(res)) return;
+  const check = validateSupabaseEnv(res);
+  if (!check.ok) return;
 
   try {
     const { data, error } = await supabase!
@@ -79,19 +96,26 @@ app.get("/api/insights", async (req, res) => {
 
     if (error) {
       console.error("Supabase /api/insights error:", error);
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({
+        error: error.message,
+        supabase_host: check.hostname
+      });
     }
 
     res.json(data || []);
   } catch (e: any) {
     console.error("Unhandled /api/insights exception:", e);
-    res.status(500).json({ error: e?.message || "Unknown server error" });
+    res.status(500).json({
+      error: e?.message || "Unknown server error",
+      supabase_host: check.hostname
+    });
   }
 });
 
-// 3. Save Insight (Supabase)
+// 3. Save Insight
 app.post("/api/insights", async (req, res) => {
-  if (!assertSupabaseConfigured(res)) return;
+  const check = validateSupabaseEnv(res);
+  if (!check.ok) return;
 
   try {
     const { url, company, summary, impact, action, date } = req.body;
@@ -103,19 +127,26 @@ app.post("/api/insights", async (req, res) => {
 
     if (error) {
       console.error("Supabase POST /api/insights error:", error);
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({
+        error: error.message,
+        supabase_host: check.hostname
+      });
     }
 
     res.json(data?.[0] || null);
   } catch (e: any) {
     console.error("Unhandled POST /api/insights exception:", e);
-    res.status(500).json({ error: e?.message || "Unknown server error" });
+    res.status(500).json({
+      error: e?.message || "Unknown server error",
+      supabase_host: check.hostname
+    });
   }
 });
 
-// 4. Delete Insight (Supabase)
+// 4. Delete Insight
 app.delete("/api/insights/:id", async (req, res) => {
-  if (!assertSupabaseConfigured(res)) return;
+  const check = validateSupabaseEnv(res);
+  if (!check.ok) return;
 
   try {
     const { id } = req.params;
@@ -127,13 +158,19 @@ app.delete("/api/insights/:id", async (req, res) => {
 
     if (error) {
       console.error("Supabase DELETE /api/insights/:id error:", error);
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({
+        error: error.message,
+        supabase_host: check.hostname
+      });
     }
 
     res.json({ success: true });
   } catch (e: any) {
     console.error("Unhandled DELETE /api/insights/:id exception:", e);
-    res.status(500).json({ error: e?.message || "Unknown server error" });
+    res.status(500).json({
+      error: e?.message || "Unknown server error",
+      supabase_host: check.hostname
+    });
   }
 });
 
@@ -156,7 +193,6 @@ app.post("/api/webhook", async (req, res) => {
 
     const result = await googleResponse.text();
     res.json({ success: true, result });
-
   } catch (error: any) {
     console.error("Webhook Proxy Error:", error);
     res.status(500).json({ error: error.message || "Failed to send data to webhook" });
