@@ -49,29 +49,39 @@ function App() {
     setShowSettings(false);
   };
 
-  // Hidden Form Ref
-  const formRef = React.useRef<HTMLFormElement>(null);
-  const [payload, setPayload] = useState('');
-
   const handleSendToSheet = async (insight: Insight) => {
-    if (!webhookUrl) {
-      setShowSettings(true);
-      alert("Please configure the Automation Webhook URL first.");
-      return;
-    }
-
     setIsSending(insight.id || 999);
-    setPayload(JSON.stringify(insight));
+    setError(null);
 
-    setTimeout(() => {
-      if (formRef.current) {
-        formRef.current.submit();
-        setTimeout(() => {
-          setIsSending(null);
-          alert('Sent to Google Sheet!');
-        }, 1000);
+    try {
+      const res = await fetch('/api/webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: webhookUrl || undefined,
+          data: insight
+        })
+      });
+
+      let data: any = null;
+      try { data = await res.json(); } catch {}
+
+      if (!res.ok) {
+        const msg =
+          (data && typeof data === 'object' && data.error) ?
+            String(data.error) :
+            `Failed to send to sheet (HTTP ${res.status})`;
+        setError(msg);
+        if (!webhookUrl) setShowSettings(true);
+        return;
       }
-    }, 100);
+
+      alert('Sent to Google Sheet!');
+    } catch (e: any) {
+      setError(e?.message || 'Failed to send to sheet.');
+    } finally {
+      setIsSending(null);
+    }
   };
 
   const fetchInsights = async () => {
@@ -317,18 +327,6 @@ function App() {
         </AnimatePresence>
       </main>
 
-      {/* Hidden Form for Google Sheets Submission */}
-      <form
-        ref={formRef}
-        action={webhookUrl}
-        method="POST"
-        target="hidden_iframe"
-        className="hidden"
-      >
-        <input type="hidden" name="payload" value={payload} />
-      </form>
-      <iframe name="hidden_iframe" className="hidden" />
-
       {/* Settings Modal */}
       <AnimatePresence>
         {showSettings && (
@@ -369,7 +367,7 @@ function App() {
                       Automation Webhook URL
                     </label>
                     <p className="text-xs text-slate-500 mb-2">
-                      Required for "Send to Sheet" button.
+                      Optional override. Leave blank to use the server-configured webhook URL.
                       <button
                         onClick={() => setShowGuide(!showGuide)}
                         className="ml-1 text-white hover:underline font-medium"

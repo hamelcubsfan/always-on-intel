@@ -178,9 +178,16 @@ app.delete("/api/insights/:id", async (req, res) => {
 app.post("/api/webhook", async (req, res) => {
   try {
     const { url, data } = req.body;
-    if (!url) return res.status(400).json({ error: "Webhook URL is required" });
+    const configuredWebhookUrl = process.env.AUTOMATION_WEBHOOK_URL;
+    const targetUrl = url || configuredWebhookUrl;
 
-    const googleResponse = await fetch(url, {
+    if (!targetUrl) {
+      return res.status(400).json({
+        error: "Webhook URL is required. Set AUTOMATION_WEBHOOK_URL or provide url in request body."
+      });
+    }
+
+    const googleResponse = await fetch(targetUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(data)
