@@ -20,6 +20,7 @@ function App() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [sheetUrl, setSheetUrl] = useState('');
   const [webhookUrl, setWebhookUrl] = useState('');
+  const [defaultWebhookUrl, setDefaultWebhookUrl] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [isSending, setIsSending] = useState<number | null>(null);
@@ -35,6 +36,7 @@ function App() {
 
   useEffect(() => {
     fetchInsights();
+    fetchWebhookConfig();
     const savedSheetUrl = localStorage.getItem('recruitIntel_sheetUrl');
     const savedWebhookUrl = localStorage.getItem('recruitIntel_webhookUrl');
     if (savedSheetUrl) setSheetUrl(savedSheetUrl);
@@ -49,28 +51,46 @@ function App() {
     setShowSettings(false);
   };
 
-  // Hidden Form Ref
+  const fetchWebhookConfig = async () => {
+    try {
+      const res = await fetch('/api/webhook-config');
+      if (!res.ok) return;
+
+      const data = await res.json();
+      if (data && typeof data.webhookUrl === 'string') {
+        setDefaultWebhookUrl(data.webhookUrl);
+      }
+    } catch {
+      // Optional config endpoint; ignore failures.
+    }
+  };
+
+  // Hidden Form Ref (browser-authenticated submit to Apps Script)
   const formRef = React.useRef<HTMLFormElement>(null);
   const [payload, setPayload] = useState('');
 
   const handleSendToSheet = async (insight: Insight) => {
-    if (!webhookUrl) {
+    const effectiveWebhookUrl = webhookUrl.trim() || defaultWebhookUrl;
+
+    if (!effectiveWebhookUrl) {
       setShowSettings(true);
-      alert("Please configure the Automation Webhook URL first.");
+      setError('Please configure an Automation Webhook URL in Settings.');
       return;
     }
 
     setIsSending(insight.id || 999);
+    setError(null);
     setPayload(JSON.stringify(insight));
 
     setTimeout(() => {
       if (formRef.current) {
         formRef.current.submit();
-        setTimeout(() => {
-          setIsSending(null);
-          alert('Sent to Google Sheet!');
-        }, 1000);
       }
+
+      setTimeout(() => {
+        setIsSending(null);
+        alert('Sent to Google Sheet!');
+      }, 800);
     }, 100);
   };
 
@@ -317,10 +337,11 @@ function App() {
         </AnimatePresence>
       </main>
 
+
       {/* Hidden Form for Google Sheets Submission */}
       <form
         ref={formRef}
-        action={webhookUrl}
+        action={webhookUrl.trim() || defaultWebhookUrl}
         method="POST"
         target="hidden_iframe"
         className="hidden"
@@ -369,7 +390,7 @@ function App() {
                       Automation Webhook URL
                     </label>
                     <p className="text-xs text-slate-500 mb-2">
-                      Required for "Send to Sheet" button.
+                      Optional override. Leave blank to use the server-configured webhook URL from Vercel.
                       <button
                         onClick={() => setShowGuide(!showGuide)}
                         className="ml-1 text-white hover:underline font-medium"
@@ -384,6 +405,11 @@ function App() {
                       value={webhookUrl}
                       onChange={(e) => setWebhookUrl(e.target.value)}
                     />
+                    {!webhookUrl && defaultWebhookUrl && (
+                      <p className="text-xs text-slate-500 mt-2 break-all">
+                        Using server default: {defaultWebhookUrl}
+                      </p>
+                    )}
                   </div>
 
                   {showGuide && (
@@ -395,7 +421,7 @@ function App() {
                         <li>Paste the code below into the editor (replace everything).</li>
                         <li>Click <strong>Deploy &gt; New deployment</strong>.</li>
                         <li>Select type: <strong>Web app</strong>.</li>
-                        <li>Set <em>Who has access</em> to: <strong>Anyone with Google Account</strong> (or Anyone in your Org).</li>
+                        <li>Set <em>Who has access</em> to: <strong>Anyone</strong> (best for server/browser automation). If unavailable, use the broadest option your org allows.</li>
                         <li>Click <strong>Deploy</strong> and copy the <strong>Web app URL</strong>.</li>
                         <li>Paste that URL above.</li>
                       </ol>

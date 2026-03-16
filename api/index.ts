@@ -9,6 +9,37 @@ const supabaseAnonKey = (process.env.SUPABASE_ANON_KEY || '').trim();
 const app = express();
 app.use(express.json());
 
+
+function normalizeGoogleAppsScriptUrl(rawUrl: string) {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.hostname === 'script.google.com' && parsed.pathname.startsWith('/a/macros/')) {
+      // Domain-scoped URLs like /a/macros/google.com/s/.../exec often require auth.
+      // Convert to public web app form: /macros/s/.../exec.
+      parsed.pathname = parsed.pathname.replace(/^\/a\/macros\/[^/]+\//, '/macros/');
+      return parsed.toString();
+    }
+  } catch {
+    // leave validation to fetch path below
+  }
+  return rawUrl;
+}
+
+function extractWebhookErrorMessage(status: number, body: string) {
+  const looksLikeHtml = /<html|<!DOCTYPE html>/i.test(body);
+
+  if (status === 401 || status === 403) {
+    return 'Google Apps Script rejected the request (auth required). Use the deployed Web App URL in the format https://script.google.com/macros/s/.../exec and set access to Anyone when possible, or submit directly from a signed-in browser session.';
+  }
+
+  if (looksLikeHtml) {
+    return `Google Apps Script returned HTTP ${status} with an HTML page. Verify the Web App URL is the deployed /macros/s/.../exec endpoint.`;
+  }
+
+  const compact = body.replace(/\s+/g, ' ').slice(0, 240);
+  return `Google Apps Script returned HTTP ${status}: ${compact}`;
+}
+
 function validateSupabaseEnv(res?: any) {
   const missing: string[] = [];
   if (!supabaseUrl) missing.push('SUPABASE_URL');
@@ -174,13 +205,32 @@ app.delete("/api/insights/:id", async (req, res) => {
   }
 });
 
+// 5. Webhook Config (exposed to client to support browser-authenticated submission)
+app.get("/api/webhook-config", (req, res) => {
+  const configuredWebhookUrl = (process.env.AUTOMATION_WEBHOOK_URL || '').trim();
+  const normalizedWebhookUrl = configuredWebhookUrl
+    ? normalizeGoogleAppsScriptUrl(configuredWebhookUrl)
+    : '';
+
+  res.json({ webhookUrl: normalizedWebhookUrl });
+});
+
 // 5. Webhook Proxy
 app.post("/api/webhook", async (req, res) => {
   try {
     const { url, data } = req.body;
-    if (!url) return res.status(400).json({ error: "Webhook URL is required" });
+    const configuredWebhookUrl = process.env.AUTOMATION_WEBHOOK_URL;
+    const targetUrl = url || configuredWebhookUrl;
 
-    const googleResponse = await fetch(url, {
+    if (!targetUrl) {
+      return res.status(400).json({
+        error: "Webhook URL is required. Set AUTOMATION_WEBHOOK_URL or provide url in request body."
+      });
+    }
+
+    const normalizedTargetUrl = normalizeGoogleAppsScriptUrl(targetUrl);
+
+    const googleResponse = await fetch(normalizedTargetUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(data)
@@ -188,7 +238,7 @@ app.post("/api/webhook", async (req, res) => {
 
     if (!googleResponse.ok) {
       const text = await googleResponse.text();
-      throw new Error(`Google Apps Script returned ${googleResponse.status}: ${text}`);
+      throw new Error(extractWebhookErrorMessage(googleResponse.status, text));
     }
 
     const result = await googleResponse.text();
