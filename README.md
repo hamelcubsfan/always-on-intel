@@ -19,3 +19,5 @@ View your app in AI Studio: https://aistudio-preprod.corp.google.com/apps/855503
 3. Run the app:
    `npm run dev`
 4. Optional (recommended for multi-device use): set `AUTOMATION_WEBHOOK_URL` in your deployment environment (e.g., Vercel Project Settings → Environment Variables) so "Send to Sheet" works without per-browser setup.
+
+5. Use the deployed Web App URL format: `https://script.google.com/macros/s/.../exec` (not `/a/macros/...`).
