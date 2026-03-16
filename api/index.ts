@@ -29,7 +29,7 @@ function extractWebhookErrorMessage(status: number, body: string) {
   const looksLikeHtml = /<html|<!DOCTYPE html>/i.test(body);
 
   if (status === 401 || status === 403) {
-    return 'Google Apps Script rejected the request (auth required). Use the deployed Web App URL in the format https://script.google.com/macros/s/.../exec and set access to Anyone with Google Account (or Anyone in your org).';
+    return 'Google Apps Script rejected the request (auth required). Use the deployed Web App URL in the format https://script.google.com/macros/s/.../exec and set access to Anyone when possible, or submit directly from a signed-in browser session.';
   }
 
   if (looksLikeHtml) {
@@ -203,6 +203,16 @@ app.delete("/api/insights/:id", async (req, res) => {
       supabase_host: check.hostname
     });
   }
+});
+
+// 5. Webhook Config (exposed to client to support browser-authenticated submission)
+app.get("/api/webhook-config", (req, res) => {
+  const configuredWebhookUrl = (process.env.AUTOMATION_WEBHOOK_URL || '').trim();
+  const normalizedWebhookUrl = configuredWebhookUrl
+    ? normalizeGoogleAppsScriptUrl(configuredWebhookUrl)
+    : '';
+
+  res.json({ webhookUrl: normalizedWebhookUrl });
 });
 
 // 5. Webhook Proxy

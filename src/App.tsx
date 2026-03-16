@@ -20,6 +20,7 @@ function App() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [sheetUrl, setSheetUrl] = useState('');
   const [webhookUrl, setWebhookUrl] = useState('');
+  const [defaultWebhookUrl, setDefaultWebhookUrl] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [isSending, setIsSending] = useState<number | null>(null);
@@ -35,6 +36,7 @@ function App() {
 
   useEffect(() => {
     fetchInsights();
+    fetchWebhookConfig();
     const savedSheetUrl = localStorage.getItem('recruitIntel_sheetUrl');
     const savedWebhookUrl = localStorage.getItem('recruitIntel_webhookUrl');
     if (savedSheetUrl) setSheetUrl(savedSheetUrl);
@@ -49,39 +51,47 @@ function App() {
     setShowSettings(false);
   };
 
+  const fetchWebhookConfig = async () => {
+    try {
+      const res = await fetch('/api/webhook-config');
+      if (!res.ok) return;
+
+      const data = await res.json();
+      if (data && typeof data.webhookUrl === 'string') {
+        setDefaultWebhookUrl(data.webhookUrl);
+      }
+    } catch {
+      // Optional config endpoint; ignore failures.
+    }
+  };
+
+  // Hidden Form Ref (browser-authenticated submit to Apps Script)
+  const formRef = React.useRef<HTMLFormElement>(null);
+  const [payload, setPayload] = useState('');
+
   const handleSendToSheet = async (insight: Insight) => {
+    const effectiveWebhookUrl = webhookUrl.trim() || defaultWebhookUrl;
+
+    if (!effectiveWebhookUrl) {
+      setShowSettings(true);
+      setError('Please configure an Automation Webhook URL in Settings.');
+      return;
+    }
+
     setIsSending(insight.id || 999);
     setError(null);
+    setPayload(JSON.stringify(insight));
 
-    try {
-      const res = await fetch('/api/webhook', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url: webhookUrl || undefined,
-          data: insight
-        })
-      });
-
-      let data: any = null;
-      try { data = await res.json(); } catch {}
-
-      if (!res.ok) {
-        const msg =
-          (data && typeof data === 'object' && data.error) ?
-            String(data.error) :
-            `Failed to send to sheet (HTTP ${res.status})`;
-        setError(msg);
-        if (!webhookUrl) setShowSettings(true);
-        return;
+    setTimeout(() => {
+      if (formRef.current) {
+        formRef.current.submit();
       }
 
-      alert('Sent to Google Sheet!');
-    } catch (e: any) {
-      setError(e?.message || 'Failed to send to sheet.');
-    } finally {
-      setIsSending(null);
-    }
+      setTimeout(() => {
+        setIsSending(null);
+        alert('Sent to Google Sheet!');
+      }, 800);
+    }, 100);
   };
 
   const fetchInsights = async () => {
@@ -327,6 +337,19 @@ function App() {
         </AnimatePresence>
       </main>
 
+
+      {/* Hidden Form for Google Sheets Submission */}
+      <form
+        ref={formRef}
+        action={webhookUrl.trim() || defaultWebhookUrl}
+        method="POST"
+        target="hidden_iframe"
+        className="hidden"
+      >
+        <input type="hidden" name="payload" value={payload} />
+      </form>
+      <iframe name="hidden_iframe" className="hidden" />
+
       {/* Settings Modal */}
       <AnimatePresence>
         {showSettings && (
@@ -367,7 +390,7 @@ function App() {
                       Automation Webhook URL
                     </label>
                     <p className="text-xs text-slate-500 mb-2">
-                      Optional override. Leave blank to use the server-configured webhook URL.
+                      Optional override. Leave blank to use the server-configured webhook URL from Vercel.
                       <button
                         onClick={() => setShowGuide(!showGuide)}
                         className="ml-1 text-white hover:underline font-medium"
@@ -382,6 +405,11 @@ function App() {
                       value={webhookUrl}
                       onChange={(e) => setWebhookUrl(e.target.value)}
                     />
+                    {!webhookUrl && defaultWebhookUrl && (
+                      <p className="text-xs text-slate-500 mt-2 break-all">
+                        Using server default: {defaultWebhookUrl}
+                      </p>
+                    )}
                   </div>
 
                   {showGuide && (
@@ -393,7 +421,7 @@ function App() {
                         <li>Paste the code below into the editor (replace everything).</li>
                         <li>Click <strong>Deploy &gt; New deployment</strong>.</li>
                         <li>Select type: <strong>Web app</strong>.</li>
-                        <li>Set <em>Who has access</em> to: <strong>Anyone with Google Account</strong> (or Anyone in your Org).</li>
+                        <li>Set <em>Who has access</em> to: <strong>Anyone</strong> (best for server/browser automation). If unavailable, use the broadest option your org allows.</li>
                         <li>Click <strong>Deploy</strong> and copy the <strong>Web app URL</strong>.</li>
                         <li>Paste that URL above.</li>
                       </ol>
